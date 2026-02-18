@@ -61,9 +61,9 @@ def extract_product_type(filename: str) -> str:
                 tag = elem.tag
                 if tag.startswith(f"{PDS4_NS}Product"):
                     return tag.replace(PDS4_NS, "")
-        raise Exception(f"Could not find product type for: {filename}")
+        raise ValueError(f"Could not find product type for: {filename}")
     except Exception as e:
-        raise Exception(f"Could not parse product: {filename}") from e
+        raise ValueError(f"Could not parse product: {filename}") from e
 
 
 def extract_lidvid(filename: str, tolerant: bool = False) -> str:
@@ -81,13 +81,13 @@ def extract_lidvid(filename: str, tolerant: bool = False) -> str:
                     lidvid = lid + "::" + elem.text
                     return lidvid
                 elif elem.tag == f"{PDS4_NS}Identification_Area":
-                    raise Exception(f"Missing LID or VID for: {filename}")
+                    raise ValueError(f"Missing LID or VID for: {filename}")
     except Exception as e:
         print(f"Could not parse {filename}: {e}")
         if tolerant:
             return f"***INVALID***{filename}"
-        raise Exception(f"Could not parse product: {filename}") from e
-    raise Exception(f"Missing LID or VID for: {filename}")
+        raise ValueError(f"Could not parse product: {filename}") from e
+    raise ValueError(f"Missing LID or VID for: {filename}")
 
 
 def inventory_to_dict(inventory: Iterable[str]) -> Dict[str, Tuple[str, str]]:
