@@ -33,10 +33,11 @@ def is_basic_product(filename: str, deep: bool = False) -> bool:
 
 def extract_product_type(filename: str) -> str:
     try:
-        for (_, elem) in etree.iterparse(filename, events=['start']):
-            tag = elem.tag
-            if tag.startswith(f"{PDS4_NS}Product"):
-                return tag.replace(PDS4_NS, "")
+        with open(filename, 'rb') as f:
+            for (_, elem) in etree.iterparse(f, events=['start']):
+                tag = elem.tag
+                if tag.startswith(f"{PDS4_NS}Product"):
+                    return tag.replace(PDS4_NS, "")
         raise Exception(f"Could not find product type for: {filename}")
     except Exception as e:
         raise Exception(f"Could not parse product: {filename}") from e
@@ -45,14 +46,15 @@ def extract_product_type(filename: str) -> str:
 def extract_lidvid(filename: str, tolerant: bool = False) -> str:
     lid = ""
     try:
-        for (_, elem) in etree.iterparse(filename):
-            if elem.tag == f"{PDS4_NS}logical_identifier":
-                lid = elem.text
-            elif elem.tag == f"{PDS4_NS}version_id":
-                lidvid = lid + "::" + elem.text
-                return lidvid
-            elif elem.tag == f"{PDS4_NS}Identification_Area":
-                raise Exception(f"Missing LID or VID for: {filename}")
+        with open(filename, 'rb') as f:
+            for (_, elem) in etree.iterparse(f):
+                if elem.tag == f"{PDS4_NS}logical_identifier":
+                    lid = elem.text
+                elif elem.tag == f"{PDS4_NS}version_id":
+                    lidvid = lid + "::" + elem.text
+                    return lidvid
+                elif elem.tag == f"{PDS4_NS}Identification_Area":
+                    raise Exception(f"Missing LID or VID for: {filename}")
     except Exception as e:
         print(f"Could not parse {filename}: {e}")
         if tolerant:
