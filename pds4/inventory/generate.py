@@ -31,14 +31,13 @@ def main() -> None:
     )
 
     p = pool.Pool(processes=args.processes) if args.processes > 1 else None
-    build_inventory(
+    inv = build_inventory(
         args.dirname,
-        args.outfilepath,
         args.deep_product_check,
         args.tolerant,
-        args.crlf,
         p,
     )
+    write_inventory(inv, args.crlf, args.outfilepath)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -89,26 +88,26 @@ def build_parser() -> argparse.ArgumentParser:
 
 def build_inventory(
     dirname: str,
-    outfilename: str,
     deep: bool,
     tolerant: bool,
-    crlf: bool,
     pool_: multiprocessing.Pool,
-) -> None:
+) -> list[str]:
     """
     Create an inventory for all of the basic products located in the specified directory.
-    Write the output to the specifiied destination.
-
-
     """
     filenames = peeks(get_filenames(dirname, pool_, deep), logging.DEBUG)
     lidvids = peeks(get_lidvids(filenames, pool_, tolerant), logging.INFO)
-    records = (f"P,{lidvid}" for lidvid in lidvids)
+    return (f"P,{lidvid}" for lidvid in lidvids)
 
+
+def write_inventory(inv: list[str], crlf: bool, outfilename: str) -> None:
+    """
+    Write the output to the specified destination.
+    """
     sep = "\r\n" if crlf else "\n"
 
     with open(outfilename, "w", encoding="utf-8") as f:
-        f.write(f"{sep.join(sorted(records))}{sep}")
+        f.write(f"{sep.join(sorted(inv))}{sep}")
 
 
 def get_filenames(
