@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 """Generate a PDS4 inventory for all of the basic products in a directory"""
+
 import multiprocessing
 
 import inventory
@@ -16,13 +17,24 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=logging.WARNING if args.quiet else logging.DEBUG if args.debug else logging.INFO,
-        format='%(asctime)s;%(levelname)s;%(name)s; %(message)s',
-        filename=args.logfile
+        level=logging.WARNING
+        if args.quiet
+        else logging.DEBUG
+        if args.debug
+        else logging.INFO,
+        format="%(asctime)s;%(levelname)s;%(name)s; %(message)s",
+        filename=args.logfile,
     )
 
     p = pool.Pool(processes=args.processes) if args.processes > 1 else None
-    build_inventory(args.dirname, args.outfilepath, args.deep_product_check, args.tolerant, args.crlf, p)
+    build_inventory(
+        args.dirname,
+        args.outfilepath,
+        args.deep_product_check,
+        args.tolerant,
+        args.crlf,
+        p,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -30,30 +42,55 @@ def build_parser() -> argparse.ArgumentParser:
     Create an argument parser for the program.
     """
     parser = argparse.ArgumentParser(
-        description="Generate a PDS4 inventory for all of the basic products in a directory")
-    parser.add_argument("outfilepath", help="Write the inventory to the specified file.")
+        description="Generate a PDS4 inventory for all of the basic products in a directory"
+    )
+    parser.add_argument(
+        "outfilepath", help="Write the inventory to the specified file."
+    )
     parser.add_argument("dirname", help="Traverse the given directory for products.")
-    parser.add_argument("--deep-product-check", action='store_true',
-                        help="Check for basic products by parsing the label instead of using the filename. "
-                             "May decrease performance.")
-    parser.add_argument("--logfile", help="Log to the specified file instead of the console.")
-    parser.add_argument("--debug", action='store_true', help="More detailed log output.")
-    parser.add_argument("--quiet", action='store_true', help="Less detailed log output, report problems only.")
-    parser.add_argument("--tolerant", action='store_true',
-                        help="Keep parsing products even if some are invalid. "
-                             "Invalid entries may appear in the inventory file.")
-    parser.add_argument("--crlf", action='store_true', help="Use CRLF line terminators instead of LF.")
-    parser.add_argument("--processes", type=int, default=1,
-                        help="Split the task among the specified number of processes. May increase performance.")
+    parser.add_argument(
+        "--deep-product-check",
+        action="store_true",
+        help="Check for basic products by parsing the label instead of using the filename. "
+        "May decrease performance.",
+    )
+    parser.add_argument(
+        "--logfile", help="Log to the specified file instead of the console."
+    )
+    parser.add_argument(
+        "--debug", action="store_true", help="More detailed log output."
+    )
+    parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Less detailed log output, report problems only.",
+    )
+    parser.add_argument(
+        "--tolerant",
+        action="store_true",
+        help="Keep parsing products even if some are invalid. "
+        "Invalid entries may appear in the inventory file.",
+    )
+    parser.add_argument(
+        "--crlf", action="store_true", help="Use CRLF line terminators instead of LF."
+    )
+    parser.add_argument(
+        "--processes",
+        type=int,
+        default=1,
+        help="Split the task among the specified number of processes. May increase performance.",
+    )
     return parser
 
 
-def build_inventory(dirname: str,
-                    outfilename: str,
-                    deep: bool,
-                    tolerant: bool,
-                    crlf: bool,
-                    pool_: multiprocessing.Pool) -> None:
+def build_inventory(
+    dirname: str,
+    outfilename: str,
+    deep: bool,
+    tolerant: bool,
+    crlf: bool,
+    pool_: multiprocessing.Pool,
+) -> None:
     """
     Create an inventory for all of the basic products located in the specified directory.
     Write the output to the specifiied destination.
@@ -70,7 +107,9 @@ def build_inventory(dirname: str,
         f.write(f"{sep.join(sorted(records))}{sep}")
 
 
-def get_filenames(dirname: str, pool_: multiprocessing.Pool, deep: bool) -> Iterable[str]:
+def get_filenames(
+    dirname: str, pool_: multiprocessing.Pool, deep: bool
+) -> Iterable[str]:
     """
     Get the filenames for all of the basic products located in the given directory
     """
@@ -90,7 +129,9 @@ def squelch_collections(filename: str, deep: bool) -> Union[str, None]:
     return None
 
 
-def get_lidvids(filenames: Iterable[str], pool_: multiprocessing.Pool, tolerant: bool) -> Iterable[str]:
+def get_lidvids(
+    filenames: Iterable[str], pool_: multiprocessing.Pool, tolerant: bool
+) -> Iterable[str]:
     """
     Get all of the LIDVIDs declared in the list of filenames.
     """
@@ -98,7 +139,9 @@ def get_lidvids(filenames: Iterable[str], pool_: multiprocessing.Pool, tolerant:
     return do_map(func, filenames, pool_)
 
 
-def do_map(func: Callable[[str], str], items: Iterable[str], pool_: multiprocessing.Pool) -> Iterable[str]:
+def do_map(
+    func: Callable[[str], str], items: Iterable[str], pool_: multiprocessing.Pool
+) -> Iterable[str]:
     """
     This is a "multiprocessing-optional" version of unordered_map. If no multiprocessing pool is
     provided, then just do a standard generator comprehension.
@@ -124,5 +167,5 @@ def peek(x: str, level: int) -> str:
     return x
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

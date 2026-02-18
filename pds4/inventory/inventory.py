@@ -12,13 +12,16 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 PDS4_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
-NON_PRODUCT_FRAGMENTS = ('bundle', 'collection')
-NON_PRODUCT_ELEMENTS = ('Product_Collection', 'Product_Bundle')
+NON_PRODUCT_FRAGMENTS = ("bundle", "collection")
+NON_PRODUCT_ELEMENTS = ("Product_Collection", "Product_Bundle")
 
 
 def get_all_product_filenames(dirname: str) -> Iterable[str]:
-    return itertools.chain.from_iterable((os.path.join(path, filename) for filename in filenames)
-                                         for (path, _, filenames) in os.walk(dirname) if 'SUPERSEDED' not in path)
+    return itertools.chain.from_iterable(
+        (os.path.join(path, filename) for filename in filenames)
+        for (path, _, filenames) in os.walk(dirname)
+        if "SUPERSEDED" not in path
+    )
 
 
 def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
@@ -27,14 +30,19 @@ def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
 
 def is_basic_product(filename: str, deep: bool = False) -> bool:
     if deep:
-        return filename.endswith('.xml') and extract_product_type(filename) not in NON_PRODUCT_ELEMENTS
-    return filename.endswith('.xml') and not any(x in filename for x in NON_PRODUCT_FRAGMENTS)
+        return (
+            filename.endswith(".xml")
+            and extract_product_type(filename) not in NON_PRODUCT_ELEMENTS
+        )
+    return filename.endswith(".xml") and not any(
+        x in filename for x in NON_PRODUCT_FRAGMENTS
+    )
 
 
 def extract_product_type(filename: str) -> str:
     try:
-        with open(filename, 'rb') as f:
-            for (_, elem) in etree.iterparse(f, events=['start']):
+        with open(filename, "rb") as f:
+            for _, elem in etree.iterparse(f, events=["start"]):
                 tag = elem.tag
                 if tag.startswith(f"{PDS4_NS}Product"):
                     return tag.replace(PDS4_NS, "")
@@ -46,8 +54,8 @@ def extract_product_type(filename: str) -> str:
 def extract_lidvid(filename: str, tolerant: bool = False) -> str:
     lid = ""
     try:
-        with open(filename, 'rb') as f:
-            for (_, elem) in etree.iterparse(f):
+        with open(filename, "rb") as f:
+            for _, elem in etree.iterparse(f):
                 if elem.tag == f"{PDS4_NS}logical_identifier":
                     lid = elem.text
                 elif elem.tag == f"{PDS4_NS}version_id":
@@ -74,6 +82,6 @@ def _invline_to_tuple(invline: str) -> Tuple[str, Tuple[str, str]]:
     """
     Convert an inventory line to a tuple of (LID, (VID, member_type))
     """
-    member_type, lidvid = [x.strip() for x in invline.split(',')]
-    lid, vid = [x.strip() for x in lidvid.split('::')]
+    member_type, lidvid = [x.strip() for x in invline.split(",")]
+    lid, vid = [x.strip() for x in lidvid.split("::")]
     return lid, (vid, member_type)
