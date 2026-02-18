@@ -3,15 +3,19 @@
 
 import multiprocessing
 
-import inventory
 import argparse
 import logging
 from typing import Iterable, Callable, Union
 from multiprocessing import pool
 from functools import partial
 
+import inventory
+
 
 def main() -> None:
+    """
+    Generates the inventory
+    """
     parser = build_parser()
 
     args = parser.parse_args()
@@ -103,7 +107,7 @@ def build_inventory(
 
     sep = "\r\n" if crlf else "\n"
 
-    with open(outfilename, "w") as f:
+    with open(outfilename, "w", encoding="utf-8") as f:
         f.write(f"{sep.join(sorted(records))}{sep}")
 
 
@@ -148,8 +152,7 @@ def do_map(
     """
     if pool_ is None:
         return (func(x) for x in items)
-    else:
-        return pool_.imap_unordered(func, items, 1024)
+    return pool_.imap_unordered(func, items, 1024)
 
 
 def peeks(items: Iterable[str], level: int) -> Iterable[str]:
