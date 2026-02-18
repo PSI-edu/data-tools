@@ -1,3 +1,7 @@
+"""
+Methods to discover and analyze products and inventories.
+"""
+
 import itertools
 import os
 
@@ -17,6 +21,8 @@ NON_PRODUCT_ELEMENTS = ("Product_Collection", "Product_Bundle")
 
 
 def get_all_product_filenames(dirname: str) -> Iterable[str]:
+    """Gets a generator of all of the product filenames in a directory.
+    This will exclude any superseded products."""
     return itertools.chain.from_iterable(
         (os.path.join(path, filename) for filename in filenames)
         for (path, _, filenames) in os.walk(dirname)
@@ -25,10 +31,16 @@ def get_all_product_filenames(dirname: str) -> Iterable[str]:
 
 
 def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
+    """
+    Gets a generator of all of the basic product filenames in a directory.
+    """
     return (x for x in get_all_product_filenames(dirname) if is_basic_product(x, deep))
 
 
 def is_basic_product(filename: str, deep: bool = False) -> bool:
+    """Determines if the specified filename is for a basic product.
+    This is based off of the filename
+    unless deep is true, then it will parse each label."""
     if deep:
         return (
             filename.endswith(".xml")
@@ -40,6 +52,9 @@ def is_basic_product(filename: str, deep: bool = False) -> bool:
 
 
 def extract_product_type(filename: str) -> str:
+    """
+    Gets the product type from the specified product by parsing the label.
+    """
     try:
         with open(filename, "rb") as f:
             for _, elem in etree.iterparse(f, events=["start"]):
@@ -52,6 +67,10 @@ def extract_product_type(filename: str) -> str:
 
 
 def extract_lidvid(filename: str, tolerant: bool = False) -> str:
+    """
+    Gets the lidvid from the specified product. Parser errors will
+    cause an exception unless tolerant is true.
+    """
     lid = ""
     try:
         with open(filename, "rb") as f:
@@ -68,6 +87,7 @@ def extract_lidvid(filename: str, tolerant: bool = False) -> str:
         if tolerant:
             return f"***INVALID***{filename}"
         raise Exception(f"Could not parse product: {filename}") from e
+    raise Exception(f"Missing LID or VID for: {filename}")
 
 
 def inventory_to_dict(inventory: Iterable[str]) -> Dict[str, Tuple[str, str]]:
