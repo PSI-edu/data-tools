@@ -27,7 +27,7 @@ def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
 
 def is_basic_product(filename: str, deep: bool = False) -> bool:
     if deep:
-        return filename.endswith('.xml') and not extract_product_type(filename) in NON_PRODUCT_ELEMENTS
+        return filename.endswith('.xml') and extract_product_type(filename) not in NON_PRODUCT_ELEMENTS
     return filename.endswith('.xml') and not any(x in filename for x in NON_PRODUCT_FRAGMENTS)
 
 
