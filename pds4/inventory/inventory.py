@@ -1,4 +1,7 @@
-import itertools
+"""
+Methods to discover and analyze products and inventories.
+"""
+
 import os
 
 import logging
@@ -12,52 +15,78 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 PDS4_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
-NON_PRODUCT_FRAGMENTS = ('bundle', 'collection')
-NON_PRODUCT_ELEMENTS = ('Product_Collection', 'Product_Bundle')
+NON_PRODUCT_FRAGMENTS = ("bundle", "collection")
+NON_PRODUCT_ELEMENTS = ("Product_Collection", "Product_Bundle")
 
+LID_TAG = f"{PDS4_NS}logical_identifier"
+VID_TAG = f"{PDS4_NS}version_id"
+ID_AREA_TAG = f"{PDS4_NS}Identification_Area"
 
 def get_all_product_filenames(dirname: str) -> Iterable[str]:
-    return itertools.chain.from_iterable((os.path.join(path, filename) for filename in filenames)
-                                         for (path, _, filenames) in os.walk(dirname) if 'SUPERSEDED' not in path)
-
+    """Gets a generator of all of the product filenames in a directory.
+    This will exclude any superseded products."""
+    for path, dirs, filenames in os.walk(dirname):
+        dirs[:] = [x for x in dirs if x != "SUPERSEDED"]
+        yield from (os.path.join(path, filename) for filename in filenames)
 
 def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
+    """
+    Gets a generator of all of the basic product filenames in a directory.
+    """
     return (x for x in get_all_product_filenames(dirname) if is_basic_product(x, deep))
 
 
 def is_basic_product(filename: str, deep: bool = False) -> bool:
+    """Determines if the specified filename is for a basic product.
+    This is based off of the filename
+    unless deep is true, then it will parse each label."""
     if deep:
-        return filename.endswith('.xml') and not extract_product_type(filename) in NON_PRODUCT_ELEMENTS
-    return filename.endswith('.xml') and not any(x in filename for x in NON_PRODUCT_FRAGMENTS)
+        return (
+            filename.endswith(".xml")
+            and extract_product_type(filename) not in NON_PRODUCT_ELEMENTS
+        )
+    return filename.endswith(".xml") and not any(
+        x in filename for x in NON_PRODUCT_FRAGMENTS
+    )
 
 
 def extract_product_type(filename: str) -> str:
+    """
+    Gets the product type from the specified product by parsing the label.
+    """
     try:
-        for (_, elem) in etree.iterparse(filename, events=['start']):
-            tag = elem.tag
-            if tag.startswith(f"{PDS4_NS}Product"):
-                return tag.replace(PDS4_NS, "")
-        raise Exception(f"Could not find product type for: {filename}")
+        with open(filename, "rb") as f:
+            for _, elem in etree.iterparse(f, events=["start"]):
+                tag = elem.tag
+                if tag.startswith(f"{PDS4_NS}Product"):
+                    return tag.replace(PDS4_NS, "")
+        raise ValueError(f"Could not find product type for: {filename}")
     except Exception as e:
-        raise Exception(f"Could not parse product: {filename}") from e
+        raise ValueError(f"Could not parse product: {filename}") from e
 
 
 def extract_lidvid(filename: str, tolerant: bool = False) -> str:
+    """
+    Gets the lidvid from the specified product. Parser errors will
+    cause an exception unless tolerant is true.
+    """
     lid = ""
     try:
-        for (_, elem) in etree.iterparse(filename):
-            if elem.tag == f"{PDS4_NS}logical_identifier":
-                lid = elem.text
-            elif elem.tag == f"{PDS4_NS}version_id":
-                lidvid = lid + "::" + elem.text
-                return lidvid
-            elif elem.tag == f"{PDS4_NS}Identification_Area":
-                raise Exception(f"Missing LID or VID for: {filename}")
+        with open(filename, "rb") as f:
+            for _, elem in etree.iterparse(f):
+                if elem.tag == LID_TAG:
+                    lid = elem.text
+                elif elem.tag == VID_TAG:
+                    lidvid = lid + "::" + elem.text
+                    return lidvid
+                elif elem.tag == ID_AREA_TAG:
+                    raise ValueError(f"Missing LID or VID for: {filename}")
     except Exception as e:
         print(f"Could not parse {filename}: {e}")
         if tolerant:
             return f"***INVALID***{filename}"
-        raise Exception(f"Could not parse product: {filename}") from e
+        raise ValueError(f"Could not parse product: {filename}") from e
+    raise ValueError(f"Missing LID or VID for: {filename}")
 
 
 def inventory_to_dict(inventory: Iterable[str]) -> Dict[str, Tuple[str, str]]:
@@ -72,6 +101,6 @@ def _invline_to_tuple(invline: str) -> Tuple[str, Tuple[str, str]]:
     """
     Convert an inventory line to a tuple of (LID, (VID, member_type))
     """
-    member_type, lidvid = [x.strip() for x in invline.split(',')]
-    lid, vid = [x.strip() for x in lidvid.split('::')]
+    member_type, lidvid = [x.strip() for x in invline.split(",")]
+    lid, vid = [x.strip() for x in lidvid.split("::")]
     return lid, (vid, member_type)
