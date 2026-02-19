@@ -2,7 +2,6 @@
 Methods to discover and analyze products and inventories.
 """
 
-import itertools
 import os
 
 import logging
