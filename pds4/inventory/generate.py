@@ -118,18 +118,18 @@ def get_filenames(
     """
     filenames = inventory.get_all_product_filenames(dirname)
     func = partial(squelch_collections, deep=deep)
-    return (x for x in do_map(func, filenames, pool_) if x is not None)
+    return (filename for filename, aggregate in do_map(func, filenames, pool_) if not aggregate)
 
 
-def squelch_collections(filename: str, deep: bool) -> Union[str, None]:
+def squelch_collections(filename: str, deep: bool) -> tuple[str, bool]:
     """
     Convert the filenames for collections in the provided list to none.
     This is kind of a hack because multiprocessing doesn't directly support
     filtering.
     """
     if inventory.is_basic_product(filename, deep=deep):
-        return filename
-    return None
+        return filename, False
+    return filename, True
 
 
 def get_lidvids(
@@ -142,9 +142,9 @@ def get_lidvids(
     return do_map(func, filenames, pool_)
 
 
-def do_map(
-    func: Callable[[str], str], items: Iterable[str], pool_: multiprocessing.pool.Pool | None
-) -> Iterable[str]:
+def do_map[T](
+    func: Callable[[str], T], items: Iterable[str], pool_: multiprocessing.pool.Pool | None
+) -> Iterable[T]:
     """
     This is a "multiprocessing-optional" version of unordered_map. If no multiprocessing pool is
     provided, then just do a standard generator comprehension.
