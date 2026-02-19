@@ -123,9 +123,8 @@ def get_filenames(
 
 def squelch_collections(filename: str, deep: bool) -> tuple[str, bool]:
     """
-    Convert the filenames for collections in the provided list to none.
-    This is kind of a hack because multiprocessing doesn't directly support
-    filtering.
+    Decorate the filenames with a boolean indicating whether they are collections.
+    This is one way to simulate filtering while using multiprocessing.pool.
     """
     if inventory.is_basic_product(filename, deep=deep):
         return filename, False
