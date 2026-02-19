@@ -12,7 +12,6 @@ try:
 except ImportError:
     import xml.etree.ElementTree as etree
 
-logger = logging.getLogger(__name__)
 
 PDS4_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
 NON_PRODUCT_FRAGMENTS = ("bundle", "collection")
