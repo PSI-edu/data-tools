@@ -90,8 +90,8 @@ def build_inventory(
     dirname: str,
     deep: bool,
     tolerant: bool,
-    pool_: multiprocessing.Pool,
-) -> list[str]:
+    pool_: multiprocessing.pool.Pool | None,
+) -> Iterable[str]:
     """
     Create an inventory for all of the basic products located in the specified directory.
     """
@@ -100,7 +100,7 @@ def build_inventory(
     return (f"P,{lidvid}" for lidvid in lidvids)
 
 
-def write_inventory(inv: list[str], crlf: bool, outfilename: str) -> None:
+def write_inventory(inv: Iterable[str], crlf: bool, outfilename: str) -> None:
     """
     Write the output to the specified destination.
     """
@@ -111,7 +111,7 @@ def write_inventory(inv: list[str], crlf: bool, outfilename: str) -> None:
 
 
 def get_filenames(
-    dirname: str, pool_: multiprocessing.Pool, deep: bool
+    dirname: str, pool_: multiprocessing.pool.Pool | None, deep: bool
 ) -> Iterable[str]:
     """
     Get the filenames for all of the basic products located in the given directory
@@ -133,7 +133,7 @@ def squelch_collections(filename: str, deep: bool) -> Union[str, None]:
 
 
 def get_lidvids(
-    filenames: Iterable[str], pool_: multiprocessing.Pool, tolerant: bool
+    filenames: Iterable[str], pool_: multiprocessing.pool.Pool | None, tolerant: bool
 ) -> Iterable[str]:
     """
     Get all of the LIDVIDs declared in the list of filenames.
@@ -143,7 +143,7 @@ def get_lidvids(
 
 
 def do_map(
-    func: Callable[[str], str], items: Iterable[str], pool_: multiprocessing.Pool
+    func: Callable[[str], str], items: Iterable[str], pool_: multiprocessing.pool.Pool | None
 ) -> Iterable[str]:
     """
     This is a "multiprocessing-optional" version of unordered_map. If no multiprocessing pool is
