@@ -8,6 +8,7 @@ import logging
 from typing import Iterable, Callable, Union
 from multiprocessing import pool
 from functools import partial
+from typing import TypeVar
 
 import inventory
 
@@ -140,8 +141,8 @@ def get_lidvids(
     func = partial(inventory.extract_lidvid, tolerant=tolerant)
     return do_map(func, filenames, pool_)
 
-
-def do_map[T](
+T = TypeVar('T')
+def do_map(
     func: Callable[[str], T], items: Iterable[str], pool_: multiprocessing.pool.Pool | None
 ) -> Iterable[T]:
     """
