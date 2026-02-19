@@ -31,12 +31,12 @@ def main() -> None:
         filename=args.logfile,
     )
 
-    p = pool.Pool(processes=args.processes) if args.processes > 1 else None
+    
     inv = build_inventory(
         args.dirname,
         args.deep_product_check,
         args.tolerant,
-        p,
+        args.processes
     )
     write_inventory(inv, args.crlf, args.outfilepath)
 
@@ -91,13 +91,16 @@ def build_inventory(
     dirname: str,
     deep: bool,
     tolerant: bool,
-    pool_: multiprocessing.pool.Pool | None,
+    processes: int
 ) -> Iterable[str]:
     """
     Create an inventory for all of the basic products located in the specified directory.
     """
-    filenames = peeks(get_filenames(dirname, pool_, deep), logging.DEBUG)
-    lidvids = peeks(get_lidvids(filenames, pool_, tolerant), logging.INFO)
+    p1 = pool.Pool(processes=processes) if processes > 1 and deep else None
+    p2 = pool.Pool(processes=processes) if processes > 1 else None
+
+    filenames = peeks(get_filenames(dirname, p1, deep), logging.DEBUG)
+    lidvids = peeks(get_lidvids(filenames, p2, tolerant), logging.INFO)
     return (f"P,{lidvid}" for lidvid in lidvids)
 
 
@@ -151,7 +154,7 @@ def do_map(
     """
     if pool_ is None:
         return (func(x) for x in items)
-    return pool_.imap_unordered(func, items, 1024)
+    return pool_.imap_unordered(func, items, 128)
 
 
 def peeks(items: Iterable[str], level: int) -> Iterable[str]:
