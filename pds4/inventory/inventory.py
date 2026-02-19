@@ -23,12 +23,9 @@ NON_PRODUCT_ELEMENTS = ("Product_Collection", "Product_Bundle")
 def get_all_product_filenames(dirname: str) -> Iterable[str]:
     """Gets a generator of all of the product filenames in a directory.
     This will exclude any superseded products."""
-    return itertools.chain.from_iterable(
-        (os.path.join(path, filename) for filename in filenames)
-        for (path, _, filenames) in os.walk(dirname)
-        if "SUPERSEDED" not in path
-    )
-
+    for path, dirs, filenames in os.walk(dirname):
+        dirs[:] = [x for x in dirs if x != "SUPERSEDED"]
+        yield from (os.path.join(path, filename) for filename in filenames)
 
 def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
     """
