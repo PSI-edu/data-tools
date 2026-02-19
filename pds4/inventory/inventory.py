@@ -19,6 +19,9 @@ PDS4_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
 NON_PRODUCT_FRAGMENTS = ("bundle", "collection")
 NON_PRODUCT_ELEMENTS = ("Product_Collection", "Product_Bundle")
 
+LID_TAG = f"{PDS4_NS}logical_identifier"
+VID_TAG = f"{PDS4_NS}version_id"
+ID_AREA_TAG = f"{PDS4_NS}Identification_Area"
 
 def get_all_product_filenames(dirname: str) -> Iterable[str]:
     """Gets a generator of all of the product filenames in a directory.
@@ -72,12 +75,12 @@ def extract_lidvid(filename: str, tolerant: bool = False) -> str:
     try:
         with open(filename, "rb") as f:
             for _, elem in etree.iterparse(f):
-                if elem.tag == f"{PDS4_NS}logical_identifier":
+                if elem.tag == LID_TAG:
                     lid = elem.text
-                elif elem.tag == f"{PDS4_NS}version_id":
+                elif elem.tag == VID_TAG:
                     lidvid = lid + "::" + elem.text
                     return lidvid
-                elif elem.tag == f"{PDS4_NS}Identification_Area":
+                elif elem.tag == ID_AREA_TAG:
                     raise ValueError(f"Missing LID or VID for: {filename}")
     except Exception as e:
         print(f"Could not parse {filename}: {e}")
