@@ -12,7 +12,6 @@ try:
 except ImportError:
     import xml.etree.ElementTree as etree
 
-logger = logging.getLogger(__name__)
 
 PDS4_NS = "{http://pds.nasa.gov/pds4/pds/v1}"
 NON_PRODUCT_FRAGMENTS = ("bundle", "collection")
@@ -22,12 +21,14 @@ LID_TAG = f"{PDS4_NS}logical_identifier"
 VID_TAG = f"{PDS4_NS}version_id"
 ID_AREA_TAG = f"{PDS4_NS}Identification_Area"
 
+
 def get_all_product_filenames(dirname: str) -> Iterable[str]:
     """Gets a generator of all of the product filenames in a directory.
     This will exclude any superseded products."""
     for path, dirs, filenames in os.walk(dirname):
         dirs[:] = [x for x in dirs if x != "SUPERSEDED"]
         yield from (os.path.join(path, filename) for filename in filenames)
+
 
 def get_basic_product_filenames(dirname: str, deep: bool) -> Iterable[str]:
     """

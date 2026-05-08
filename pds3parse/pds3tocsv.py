@@ -5,8 +5,8 @@ import pds3parse
 import csv
 import itertools
 import sys
-import os.path
-
+import glob
+import os
 
 def to_dict(parsed, context=""):
     result = {}
@@ -50,12 +50,11 @@ def file_to_dict(parser, filepath):
         return parsed_dict
 
 
-def find_labels(dirname):
-    files = itertools.chain.from_iterable(
-        (os.path.join(dirpath, filename) for filename in filenames)
-        for dirpath, _, filenames in os.walk(dirname))
-    return (x for x in files if x.lower().endswith('.lbl'))
-
+def find_labels(dirname, filter):
+    print(f"Finding labels in {dirname} with filter {filter}")
+    return (os.path.join(dirname, x) 
+            for x in glob.iglob(filter, root_dir=dirname, recursive=True) 
+            if os.path.isfile(os.path.join(dirname, x)))
 
 def main():
     argparser = argparse.ArgumentParser()
@@ -66,14 +65,14 @@ def main():
                            default="out.csv",
                            help='The name of the directory to pull label files from. '
                                 'This can supplement the list of label files or replace it. ')
-
+    argparser.add_argument("--filter", help='A filter to apply to the labels. This is a glob pattern to match the label file name.', default="**/*.[Ll][Bb][Ll]")
     argparser.add_argument("labels", nargs="*")
     args = argparser.parse_args()
 
     parser = pds3parse.parser
 
     if args.src_dir:
-        labels = itertools.chain.from_iterable((args.labels, find_labels(args.src_dir)))
+        labels = itertools.chain.from_iterable((args.labels, find_labels(args.src_dir, args.filter)))
     else:
         labels = args.labels
 

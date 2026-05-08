@@ -5,10 +5,9 @@ import multiprocessing
 
 import argparse
 import logging
-from typing import Iterable, Callable, Union
+from typing import Iterable, Callable, TypeVar
 from multiprocessing import pool
 from functools import partial
-from typing import TypeVar
 
 import inventory
 
@@ -31,12 +30,12 @@ def main() -> None:
         filename=args.logfile,
     )
 
-    
     inv = build_inventory(
         args.dirname,
         args.deep_product_check,
         args.tolerant,
-        args.processes
+        args.processes,
+        args.chunksize,
     )
     write_inventory(inv, args.crlf, args.outfilepath)
 
@@ -84,14 +83,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=1,
         help="Split the task among the specified number of processes. May increase performance.",
     )
+    parser.add_argument(
+        "--chunksize",
+        type=int,
+        default=128,
+        help="When using multiple processes, each process will handle (chunksize) "
+        "elements at once. May affect performance.",
+    )
     return parser
 
 
 def build_inventory(
-    dirname: str,
-    deep: bool,
-    tolerant: bool,
-    processes: int
+    dirname: str, deep: bool, tolerant: bool, processes: int, chunksize: int
 ) -> Iterable[str]:
     """
     Create an inventory for all of the basic products located in the specified directory.
@@ -99,8 +102,8 @@ def build_inventory(
     p1 = pool.Pool(processes=processes) if processes > 1 and deep else None
     p2 = pool.Pool(processes=processes) if processes > 1 else None
 
-    filenames = peeks(get_filenames(dirname, p1, deep), logging.DEBUG)
-    lidvids = peeks(get_lidvids(filenames, p2, tolerant), logging.INFO)
+    filenames = peeks(get_filenames(dirname, p1, deep, chunksize), logging.DEBUG)
+    lidvids = peeks(get_lidvids(filenames, p2, tolerant, chunksize), logging.INFO)
     return (f"P,{lidvid}" for lidvid in lidvids)
 
 
@@ -115,14 +118,18 @@ def write_inventory(inv: Iterable[str], crlf: bool, outfilename: str) -> None:
 
 
 def get_filenames(
-    dirname: str, pool_: multiprocessing.pool.Pool | None, deep: bool
+    dirname: str, pool_: multiprocessing.pool.Pool | None, deep: bool, chunksize
 ) -> Iterable[str]:
     """
     Get the filenames for all of the basic products located in the given directory
     """
     filenames = inventory.get_all_product_filenames(dirname)
     func = partial(squelch_collections, deep=deep)
-    return (filename for filename, aggregate in do_map(func, filenames, pool_) if not aggregate)
+    return (
+        filename
+        for filename, aggregate in do_map(func, filenames, pool_, chunksize)
+        if not aggregate
+    )
 
 
 def squelch_collections(filename: str, deep: bool) -> tuple[str, bool]:
@@ -136,17 +143,26 @@ def squelch_collections(filename: str, deep: bool) -> tuple[str, bool]:
 
 
 def get_lidvids(
-    filenames: Iterable[str], pool_: multiprocessing.pool.Pool | None, tolerant: bool
+    filenames: Iterable[str],
+    pool_: multiprocessing.pool.Pool | None,
+    tolerant: bool,
+    chunksize,
 ) -> Iterable[str]:
     """
     Get all of the LIDVIDs declared in the list of filenames.
     """
     func = partial(inventory.extract_lidvid, tolerant=tolerant)
-    return do_map(func, filenames, pool_)
+    return do_map(func, filenames, pool_, chunksize)
 
-T = TypeVar('T')
+
+T = TypeVar("T")
+
+
 def do_map(
-    func: Callable[[str], T], items: Iterable[str], pool_: multiprocessing.pool.Pool | None
+    func: Callable[[str], T],
+    items: Iterable[str],
+    pool_: multiprocessing.pool.Pool | None,
+    chunksize: int,
 ) -> Iterable[T]:
     """
     This is a "multiprocessing-optional" version of unordered_map. If no multiprocessing pool is
@@ -154,7 +170,7 @@ def do_map(
     """
     if pool_ is None:
         return (func(x) for x in items)
-    return pool_.imap_unordered(func, items, 128)
+    return pool_.imap_unordered(func, items, chunksize)
 
 
 def peeks(items: Iterable[str], level: int) -> Iterable[str]:
